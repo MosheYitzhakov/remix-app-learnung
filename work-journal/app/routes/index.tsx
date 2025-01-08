@@ -1,111 +1,211 @@
+import { PrismaClient } from "@prisma/client";
 import { redirect, type ActionArgs } from "@remix-run/node";
-import { Form } from "@remix-run/react";
+import { Link, useFetcher, useLoaderData } from "@remix-run/react";
+import { format, startOfWeek } from "date-fns";
+import { useEffect, useRef } from "react";
 
 export async function action({ request }: ActionArgs) {
-  let formData = await request.formData();
-  let json = Object.fromEntries(formData);
+  const db = new PrismaClient();
+  const formData = await request.formData();
+  let { date, type, text } = Object.fromEntries(formData);
 
-  console.log(json);
+  if (
+    typeof date !== "string" ||
+    typeof type !== "string" ||
+    typeof text !== "string"
+  ) {
+    throw new Error("Bad request");
+  }
+  await db.entry.create({
+    data: {
+      date: new Date(date),
+      type: type,
+      text: text,
+    },
+  });
 
   return redirect("/");
 }
+export async function loader() {
+  let db = new PrismaClient();
+  let entries = await db.entry.findMany();
 
+  return entries.map((entry) => ({
+    ...entry,
+    date: format(entry.date, "yyyy-MM-dd"), // '2023-03-28'
+  }));
+}
 export default function Index() {
+  const fetcher = useFetcher();
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const entries = useLoaderData<typeof loader>();
+  console.log({ entries });
+  let entriesByWeek = entries.reduce<Record<string, typeof entries>>(
+    (memo, entry) => {
+      let sundayString = format(startOfWeek(entry.date), "yyyy-MM-dd");
+      memo[sundayString] ||= [];
+      memo[sundayString].push(entry);
+      return memo;
+    },
+    {}
+  );
+  let weeks = Object.keys(entriesByWeek)
+    .sort((a, b) => a.localeCompare(b))
+    .map((dateString) => ({
+      dateString,
+      work: entriesByWeek[dateString].filter((entry) => entry.type === "work"),
+      learnings: entriesByWeek[dateString].filter(
+        (entry) => entry.type === "learning"
+      ),
+      interestingThings: entriesByWeek[dateString].filter(
+        (entry) => entry.type === "interesting-thing"
+      ),
+    }));
+  console.log({ weeks });
+  useEffect(() => {
+    if (fetcher.state === "submitting" && textRef.current) {
+      textRef.current.value = "";
+      textRef.current.focus();
+    }
+  }, [fetcher.state]);
   return (
-    <div className="p-10">
-      <h1 className="text-5xl">Work Journal</h1>
-      <p className="mt-2 text-lg text-gray-400">
-        Learnings and doings. Updated weekly.
-      </p>
+    <div>
+      <div className="my-8 border p-3 ">
+        <fetcher.Form method="post">
+          <fieldset
+            className="disabled:opacity-80"
+            disabled={fetcher.state === "submitting"}
+          >
+            <p className="italic">Create a new entry</p>
 
-      <div className="my-8 border p-3">
-        <Form method="post">
-          <p className="italic">Create an entry</p>
-
-          <div>
-            <div className="mt-4">
-              <input type="date" name="date" className="text-gray-700" />
-            </div>
-
-            <div className="mt-2 space-x-6">
-              <label>
+            <div>
+              <div className="mt-4">
                 <input
-                  className="mr-1"
-                  type="radio"
-                  name="category"
-                  value="work"
+                  type="date"
+                  name="date"
+                  required
+                  className="text-gray-900"
+                  defaultValue={format(new Date(), "yyyy-MM-dd")}
                 />
-                Work
-              </label>
-              <label>
-                <input
-                  className="mr-1"
-                  type="radio"
-                  name="category"
-                  value="learning"
-                />
-                Learning
-              </label>
-              <label>
-                <input
-                  className="mr-1"
-                  type="radio"
-                  name="category"
-                  value="interesting-thing"
-                />
-                Interesting thing
-              </label>
-            </div>
+              </div>
 
-            <div className="mt-2">
-              <textarea
-                name="text"
-                className="w-full text-gray-700"
-                placeholder="Write your entry..."
-              />
-            </div>
+              <div className="mt-2 space-x-6">
+                <label>
+                  <input
+                    className="mr-1"
+                    required
+                    type="radio"
+                    name="type"
+                    value="work"
+                  />
+                  Work
+                </label>
+                <label>
+                  <input
+                    className="mr-1"
+                    type="radio"
+                    name="type"
+                    value="learning"
+                  />
+                  Learning
+                </label>
+                <label>
+                  <input
+                    className="mr-1"
+                    defaultChecked
+                    type="radio"
+                    name="type"
+                    value="interesting-thing"
+                  />
+                  Interesting thing
+                </label>
+              </div>
 
-            <div className="mt-1 text-right">
-              <button
-                className="bg-blue-500 px-4 py-1 font-medium text-white"
-                type="submit"
-              >
-                Save
-              </button>
+              <div className="mt-2">
+                <textarea
+                  ref={textRef}
+                  name="text"
+                  required
+                  className="w-full text-gray-700"
+                  placeholder="Write your entry..."
+                />
+              </div>
+
+              <div className="mt-1 text-right">
+                <button
+                  className="bg-blue-500 px-4 py-1 font-medium text-white"
+                  type="submit"
+                >
+                  {fetcher.state === "submitting" ? "Saving..." : "Save"}
+                </button>
+              </div>
             </div>
-          </div>
-        </Form>
+          </fieldset>
+        </fetcher.Form>
       </div>
 
       <div className="mt-6">
-        <p className="font-bold">
-          Week of February 20<sup>th</sup>
-        </p>
-
         <div className="mt-3 space-y-4">
-          <div>
-            <p>Work</p>
-            <ul className="ml-8 list-disc">
-              <li>First item</li>
-              <li>Second item</li>
-            </ul>
-          </div>
-          <div>
-            <p>Learnings</p>
-            <ul className="ml-8 list-disc">
-              <li>First item</li>
-              <li>Second item</li>
-            </ul>
-          </div>
-          <div>
-            <p>Interesting things</p>
-            <ul className="ml-8 list-disc">
-              <li>First item</li>
-              <li>Second item</li>
-            </ul>
-          </div>
+          {weeks.map((week) => (
+            <div key={week.dateString}>
+              <p className="font-bold">
+                Week of {format(week.dateString, "MMMM d")}
+                <sup>th</sup>
+              </p>
+              <div className="mt-3 ml-5 space-y-4">
+                {week.work.length > 0 && (
+                  <div>
+                    <p>Work</p>
+                    <ul className="ml-8 list-disc">
+                      {week.work.map((entry) => (
+                       <EntryListItem key={entry.id} entry={entry}/>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {week.learnings.length > 0 && (
+                  <div>
+                    <p>Learning</p>
+                    <ul className="ml-8 list-disc">
+                      {week.learnings.map((entry) => (
+                      <EntryListItem key={entry.id} entry={entry}/>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {week.interestingThings.length > 0 && (
+                  <div>
+                    <p>Interesting things</p>
+                    <ul className="ml-8 list-disc">
+                      {week.interestingThings.map((entry) => (
+                      <EntryListItem key={entry.id} entry={entry}/>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
+  );
+}
+
+function EntryListItem({
+  entry,
+}: {
+  entry: Awaited<ReturnType<typeof loader>>[number];
+}) {
+  return (
+    <li className="group">
+     {entry.text}
+      <Link
+        to={`/entries/${entry.id}/edit`}
+        className="ml-2 text-blue-500 opacity-30 group-hover:opacity-100"
+      >
+        Edit
+      </Link>
+    </li>
   );
 }
