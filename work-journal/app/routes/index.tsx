@@ -1,8 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import { redirect, type ActionArgs } from "@remix-run/node";
-import { Link, useFetcher, useLoaderData } from "@remix-run/react";
+import { Link, useLoaderData } from "@remix-run/react";
 import { format, startOfWeek } from "date-fns";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import EntryForm from "~/components/entry-form";
 
 export async function action({ request }: ActionArgs) {
   const db = new PrismaClient();
@@ -36,7 +37,6 @@ export async function loader() {
   }));
 }
 export default function Index() {
-  const fetcher = useFetcher();
   const textRef = useRef<HTMLTextAreaElement>(null);
   const entries = useLoaderData<typeof loader>();
   console.log({ entries });
@@ -62,87 +62,11 @@ export default function Index() {
       ),
     }));
   console.log({ weeks });
-  useEffect(() => {
-    if (fetcher.state === "submitting" && textRef.current) {
-      textRef.current.value = "";
-      textRef.current.focus();
-    }
-  }, [fetcher.state]);
+  console.log(textRef.current);
+
   return (
     <div>
-      <div className="my-8 border p-3 ">
-        <fetcher.Form method="post">
-          <fieldset
-            className="disabled:opacity-80"
-            disabled={fetcher.state === "submitting"}
-          >
-            <p className="italic">Create a new entry</p>
-
-            <div>
-              <div className="mt-4">
-                <input
-                  type="date"
-                  name="date"
-                  required
-                  className="text-gray-900"
-                  defaultValue={format(new Date(), "yyyy-MM-dd")}
-                />
-              </div>
-
-              <div className="mt-2 space-x-6">
-                <label>
-                  <input
-                    className="mr-1"
-                    required
-                    type="radio"
-                    name="type"
-                    value="work"
-                  />
-                  Work
-                </label>
-                <label>
-                  <input
-                    className="mr-1"
-                    type="radio"
-                    name="type"
-                    value="learning"
-                  />
-                  Learning
-                </label>
-                <label>
-                  <input
-                    className="mr-1"
-                    defaultChecked
-                    type="radio"
-                    name="type"
-                    value="interesting-thing"
-                  />
-                  Interesting thing
-                </label>
-              </div>
-
-              <div className="mt-2">
-                <textarea
-                  ref={textRef}
-                  name="text"
-                  required
-                  className="w-full text-gray-700"
-                  placeholder="Write your entry..."
-                />
-              </div>
-
-              <div className="mt-1 text-right">
-                <button
-                  className="bg-blue-500 px-4 py-1 font-medium text-white"
-                  type="submit"
-                >
-                  {fetcher.state === "submitting" ? "Saving..." : "Save"}
-                </button>
-              </div>
-            </div>
-          </fieldset>
-        </fetcher.Form>
-      </div>
+      <EntryForm />
 
       <div className="mt-6">
         <div className="mt-3 space-y-4">
@@ -158,7 +82,7 @@ export default function Index() {
                     <p>Work</p>
                     <ul className="ml-8 list-disc">
                       {week.work.map((entry) => (
-                       <EntryListItem key={entry.id} entry={entry}/>
+                        <EntryListItem key={entry.id} entry={entry} />
                       ))}
                     </ul>
                   </div>
@@ -168,7 +92,7 @@ export default function Index() {
                     <p>Learning</p>
                     <ul className="ml-8 list-disc">
                       {week.learnings.map((entry) => (
-                      <EntryListItem key={entry.id} entry={entry}/>
+                        <EntryListItem key={entry.id} entry={entry} />
                       ))}
                     </ul>
                   </div>
@@ -178,7 +102,7 @@ export default function Index() {
                     <p>Interesting things</p>
                     <ul className="ml-8 list-disc">
                       {week.interestingThings.map((entry) => (
-                      <EntryListItem key={entry.id} entry={entry}/>
+                        <EntryListItem key={entry.id} entry={entry} />
                       ))}
                     </ul>
                   </div>
@@ -199,7 +123,7 @@ function EntryListItem({
 }) {
   return (
     <li className="group">
-     {entry.text}
+      {entry.text}
       <Link
         to={`/entries/${entry.id}/edit`}
         className="ml-2 text-blue-500 opacity-30 group-hover:opacity-100"
