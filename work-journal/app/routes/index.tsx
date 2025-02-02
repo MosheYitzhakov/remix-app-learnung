@@ -11,7 +11,6 @@ export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   let { entryId, _action, date, type, text } = Object.fromEntries(formData);
   if (_action === "delete") {
-    console.log("deleting ", entryId);
 
     await db.entry.delete({
       where: {
@@ -50,7 +49,6 @@ export async function loader({ request }: LoaderArgs) {
 }
 export default function Index() {
   const { session, entries } = useLoaderData<typeof loader>();
-  console.log({ entries });
   let entriesByWeek = entries.reduce<Record<string, typeof entries>>(
     (memo, entry) => {
       let sundayString = format(startOfWeek(entry.date), "yyyy-MM-dd");

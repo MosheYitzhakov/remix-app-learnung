@@ -1,15 +1,34 @@
-import type { LinksFunction, MetaFunction } from "@remix-run/node";
 import {
+  redirect,
+  type ActionArgs,
+  type LinksFunction,
+  type LoaderArgs,
+  type MetaFunction,
+} from "@remix-run/node";
+import {
+  Form,
+  Link,
   Links,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from "@remix-run/react";
 
 import stylesheet from "~/tailwind.css";
-
+import { destroySession, getSession } from "./session";
+export async function action({ request }: ActionArgs) {
+  const session = await getSession(request.headers.get("cookie"));
+  return redirect("/", {
+    headers: { "Set-Cookie": await destroySession(session) },
+  });
+}
+export async function loader({ request }: LoaderArgs) {
+  let session = await getSession(request.headers.get("cookie"));
+  return session.data;
+}
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
 ];
@@ -21,6 +40,7 @@ export const meta: MetaFunction = () => ({
 });
 
 export default function App() {
+  const session = useLoaderData();
   return (
     <html lang="en">
       <head>
@@ -29,11 +49,24 @@ export default function App() {
       </head>
       <body>
         <div className="p-10">
-          <h1 className="text-5xl">Work Journal</h1>
-          <p className="mt-2 text-lg text-gray-400">
-            Learnings and doings. Updated weekly.
-          </p>
-        <Outlet />
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-5xl">Work Journal</h1>
+              <p className="mt-2 text-lg text-gray-400">
+                Learnings and doings. Updated weekly.
+              </p>
+            </div>
+            {session?.isAdmin ? (
+              <Form method="post">
+                <button className="rounded-lg bg-blue-500 px-3 py-2 font-medium text-white">
+                  Logout
+                </button>
+              </Form>
+            ) : (
+              <Link to="/login">Login</Link>
+            )}
+          </div>
+          <Outlet />
         </div>
         <ScrollRestoration />
         <Scripts />

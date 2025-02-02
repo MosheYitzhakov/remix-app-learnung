@@ -8,7 +8,6 @@ import { commitSession, getSession } from "~/session";
 export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   let { email, password } = Object.fromEntries(formData);
-  console.log({ email, password });
   if (email === "admin@admin" && password === "admin") {
     let session = await getSession();
     session.set("isAdmin", true);
