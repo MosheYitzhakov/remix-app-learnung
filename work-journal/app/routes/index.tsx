@@ -38,6 +38,7 @@ export async function loader({ request }: LoaderArgs) {
   let db = new PrismaClient();
   let entries = await db.entry.findMany();
   const session = await getSession(request.headers.get("cookie"));
+  
   return {
     session: session.data,
     entries: entries.map((entry) => ({
@@ -90,7 +91,7 @@ export default function Index() {
                         <EntryListItem
                           key={entry.id}
                           entry={entry}
-                          session={session}
+                          canEdit={session.isAdmin}
                         />
                       ))}
                     </ul>
@@ -104,7 +105,7 @@ export default function Index() {
                         <EntryListItem
                           key={entry.id}
                           entry={entry}
-                          session={session}
+                          canEdit={session.isAdmin}
                         />
                       ))}
                     </ul>
@@ -118,7 +119,7 @@ export default function Index() {
                         <EntryListItem
                           key={entry.id}
                           entry={entry}
-                          session={session}
+                          canEdit={session.isAdmin}
                         />
                       ))}
                     </ul>
@@ -135,15 +136,15 @@ export default function Index() {
 
 function EntryListItem({
   entry,
-  session,
+  canEdit,
 }: {
   entry: Awaited<ReturnType<typeof loader>>["entries"][number];
-  session: Awaited<ReturnType<typeof loader>>["session"];
+  canEdit: boolean;
 }) {
   return (
     <li className="group">
       {entry.text}
-      {session.isAdmin && (
+      {canEdit && (
         <>
           <Link
             to={`/entries/${entry.id}/edit`}

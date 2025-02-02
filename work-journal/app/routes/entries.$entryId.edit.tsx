@@ -3,6 +3,7 @@ import { redirect, type ActionArgs, type LoaderArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { format } from "date-fns";
 import EntryForm from "~/components/entry-form";
+import { getSession } from "~/session";
 import type { typeEntry } from "~/types/entry";
 
 export async function action({ request, params: { entryId } }: ActionArgs) {
@@ -35,7 +36,7 @@ export async function action({ request, params: { entryId } }: ActionArgs) {
 
   return redirect("/");
 }
-export async function loader({ params: { entryId } }: LoaderArgs) {
+export async function loader({ params: { entryId }, request }: LoaderArgs) {
   if (typeof entryId !== "string") {
     throw new Response("Not found", { status: 404 });
   }
@@ -49,6 +50,13 @@ export async function loader({ params: { entryId } }: LoaderArgs) {
   if (!entry) {
     throw new Response("Not found", { status: 404 });
   }
+
+  let session = await getSession(request.headers.get("cookie"));
+
+  if (!session.data.isAdmin) {
+    throw new Response("Not authenticated", { status: 401 });
+  }
+
   return {
     ...entry,
     date: format(entry.date, "yyyy-MM-dd"),
