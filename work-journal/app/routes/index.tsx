@@ -1,31 +1,39 @@
 import { PrismaClient } from "@prisma/client";
 import { redirect, type ActionArgs, type LoaderArgs } from "@remix-run/node";
-import { Link, useLoaderData } from "@remix-run/react";
+import { Form, Link, useLoaderData } from "@remix-run/react";
 import { format, startOfWeek } from "date-fns";
-import { useRef } from "react";
+import { type FormEvent } from "react";
 import EntryForm from "~/components/entry-form";
 import { getSession } from "~/session";
 
 export async function action({ request }: ActionArgs) {
   const db = new PrismaClient();
   const formData = await request.formData();
-  let { date, type, text } = Object.fromEntries(formData);
+  let { entryId, _action, date, type, text } = Object.fromEntries(formData);
+  if (_action === "delete") {
+    console.log("deleting ", entryId);
 
-  if (
-    typeof date !== "string" ||
-    typeof type !== "string" ||
-    typeof text !== "string"
-  ) {
-    throw new Error("Bad request");
+    await db.entry.delete({
+      where: {
+        id: +entryId,
+      },
+    });
+  } else {
+    if (
+      typeof date !== "string" ||
+      typeof type !== "string" ||
+      typeof text !== "string"
+    ) {
+      throw new Error("Bad request");
+    }
+    await db.entry.create({
+      data: {
+        date: new Date(date),
+        type: type,
+        text: text,
+      },
+    });
   }
-  await db.entry.create({
-    data: {
-      date: new Date(date),
-      type: type,
-      text: text,
-    },
-  });
-
   return redirect("/");
 }
 export async function loader({ request }: LoaderArgs) {
@@ -41,7 +49,6 @@ export async function loader({ request }: LoaderArgs) {
   };
 }
 export default function Index() {
-  const textRef = useRef<HTMLTextAreaElement>(null);
   const { session, entries } = useLoaderData<typeof loader>();
   console.log({ entries });
   let entriesByWeek = entries.reduce<Record<string, typeof entries>>(
@@ -65,8 +72,6 @@ export default function Index() {
         (entry) => entry.type === "interesting-thing"
       ),
     }));
-  console.log({ weeks });
-  console.log(textRef.current);
 
   return (
     <div>
@@ -142,13 +147,30 @@ function EntryListItem({
     <li className="group">
       {entry.text}
       {session.isAdmin && (
-        <Link
-          to={`/entries/${entry.id}/edit`}
-          className="ml-2 text-blue-500 opacity-30 group-hover:opacity-100"
-        >
-          Edit
-        </Link>
+        <>
+          <Link
+            to={`/entries/${entry.id}/edit`}
+            className="ml-2 text-blue-500 opacity-30 hover:rounded-lg hover:border hover:border-blue-500 hover:p-1 group-hover:opacity-100"
+          >
+            Edit
+          </Link>
+          <Form method="post" onSubmit={handleSubmit} className="inline">
+            <input type="hidden" name="entryId" value={entry.id} />
+            <button
+              name="_action"
+              value="delete"
+              className="ml-2 text-red-500 opacity-30 hover:rounded-lg hover:border hover:border-red-500 hover:p-1 group-hover:opacity-100"
+            >
+              Delete
+            </button>
+          </Form>
+        </>
       )}
     </li>
   );
+}
+function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  if (!confirm("Are you sure?")) {
+    e.preventDefault();
+  }
 }

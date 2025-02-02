@@ -46,7 +46,6 @@ export async function loader({ params: { entryId } }: LoaderArgs) {
     },
   });
 
-  console.log(entry);
   if (!entry) {
     throw new Response("Not found", { status: 404 });
   }
@@ -60,7 +59,6 @@ export default function EditPage() {
   const entry = useLoaderData<typeof loader>();
   return (
     <div>
-      
       <EntryForm entry={entry} />
     </div>
   );
