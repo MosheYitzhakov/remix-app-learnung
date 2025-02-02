@@ -19,6 +19,7 @@ import {
 
 import stylesheet from "~/tailwind.css";
 import { destroySession, getSession } from "./session";
+import { handleSubmit } from "./routes";
 export async function action({ request }: ActionArgs) {
   const session = await getSession(request.headers.get("cookie"));
   return redirect("/", {
@@ -57,13 +58,15 @@ export default function App() {
               </p>
             </div>
             {session?.isAdmin ? (
-              <Form method="post">
-                <button className="rounded-lg bg-blue-500 px-3 py-2 font-medium text-white">
-                  Logout
+              <Form onSubmit={handleSubmit} method="post">
+                <button className="rounded-lg px-3 py-2 font-medium text-blue-500">
+                  Logout {"->"}
                 </button>
               </Form>
             ) : (
-              <Link to="/login">Login</Link>
+              <Link to="/login" className="px-3 py-2 font-medium text-blue-500">
+                Login {"->"}
+              </Link>
             )}
           </div>
           <Outlet />

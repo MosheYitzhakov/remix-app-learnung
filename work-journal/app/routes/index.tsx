@@ -11,7 +11,6 @@ export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   let { entryId, _action, date, type, text } = Object.fromEntries(formData);
   if (_action === "delete") {
-
     await db.entry.delete({
       where: {
         id: +entryId,
@@ -167,7 +166,7 @@ function EntryListItem({
     </li>
   );
 }
-function handleSubmit(e: FormEvent<HTMLFormElement>) {
+export function handleSubmit(e: FormEvent<HTMLFormElement>) {
   if (!confirm("Are you sure?")) {
     e.preventDefault();
   }
