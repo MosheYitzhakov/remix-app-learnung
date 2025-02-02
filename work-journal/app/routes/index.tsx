@@ -1,9 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import { redirect, type ActionArgs } from "@remix-run/node";
+import { redirect, type ActionArgs, type LoaderArgs } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { format, startOfWeek } from "date-fns";
 import { useRef } from "react";
 import EntryForm from "~/components/entry-form";
+import { getSession } from "~/session";
 
 export async function action({ request }: ActionArgs) {
   const db = new PrismaClient();
@@ -27,18 +28,21 @@ export async function action({ request }: ActionArgs) {
 
   return redirect("/");
 }
-export async function loader() {
+export async function loader({ request }: LoaderArgs) {
   let db = new PrismaClient();
   let entries = await db.entry.findMany();
-
-  return entries.map((entry) => ({
-    ...entry,
-    date: format(entry.date, "yyyy-MM-dd"), // '2023-03-28'
-  }));
+  const session = await getSession(request.headers.get("cookie"));
+  return {
+    session: session.data,
+    entries: entries.map((entry) => ({
+      ...entry,
+      date: format(entry.date, "yyyy-MM-dd"), // '2023-03-28'
+    })),
+  };
 }
 export default function Index() {
   const textRef = useRef<HTMLTextAreaElement>(null);
-  const entries = useLoaderData<typeof loader>();
+  const { session, entries } = useLoaderData<typeof loader>();
   console.log({ entries });
   let entriesByWeek = entries.reduce<Record<string, typeof entries>>(
     (memo, entry) => {
@@ -66,8 +70,7 @@ export default function Index() {
 
   return (
     <div>
-      <EntryForm />
-
+      {session.isAdmin && <EntryForm />}
       <div className="mt-6">
         <div className="mt-3 space-y-4">
           {weeks.map((week) => (
@@ -82,7 +85,11 @@ export default function Index() {
                     <p>Work</p>
                     <ul className="ml-8 list-disc">
                       {week.work.map((entry) => (
-                        <EntryListItem key={entry.id} entry={entry} />
+                        <EntryListItem
+                          key={entry.id}
+                          entry={entry}
+                          session={session}
+                        />
                       ))}
                     </ul>
                   </div>
@@ -92,7 +99,11 @@ export default function Index() {
                     <p>Learning</p>
                     <ul className="ml-8 list-disc">
                       {week.learnings.map((entry) => (
-                        <EntryListItem key={entry.id} entry={entry} />
+                        <EntryListItem
+                          key={entry.id}
+                          entry={entry}
+                          session={session}
+                        />
                       ))}
                     </ul>
                   </div>
@@ -102,7 +113,11 @@ export default function Index() {
                     <p>Interesting things</p>
                     <ul className="ml-8 list-disc">
                       {week.interestingThings.map((entry) => (
-                        <EntryListItem key={entry.id} entry={entry} />
+                        <EntryListItem
+                          key={entry.id}
+                          entry={entry}
+                          session={session}
+                        />
                       ))}
                     </ul>
                   </div>
@@ -118,18 +133,22 @@ export default function Index() {
 
 function EntryListItem({
   entry,
+  session,
 }: {
-  entry: Awaited<ReturnType<typeof loader>>[number];
+  entry: Awaited<ReturnType<typeof loader>>["entries"][number];
+  session: Awaited<ReturnType<typeof loader>>["session"];
 }) {
   return (
     <li className="group">
       {entry.text}
-      <Link
-        to={`/entries/${entry.id}/edit`}
-        className="ml-2 text-blue-500 opacity-30 group-hover:opacity-100"
-      >
-        Edit
-      </Link>
+      {session.isAdmin && (
+        <Link
+          to={`/entries/${entry.id}/edit`}
+          className="ml-2 text-blue-500 opacity-30 group-hover:opacity-100"
+        >
+          Edit
+        </Link>
+      )}
     </li>
   );
 }
