@@ -10,6 +10,10 @@ export async function action({ request, params: { entryId } }: ActionArgs) {
   if (typeof entryId !== "string") {
     throw new Response("Not found", { status: 404 });
   }
+  let session = await getSession(request.headers.get("cookie"));
+  if (!session.data.isAdmin) {
+    throw new Response("Not authenticated", { status: 401 });
+  }
   const db = new PrismaClient();
 
   const formData = await request.formData();
@@ -37,6 +41,10 @@ export async function action({ request, params: { entryId } }: ActionArgs) {
   return redirect("/");
 }
 export async function loader({ params: { entryId }, request }: LoaderArgs) {
+  let session = await getSession(request.headers.get("cookie"));
+  if (!session.data.isAdmin) {
+    throw new Response("Not authenticated", { status: 401 });
+  }
   if (typeof entryId !== "string") {
     throw new Response("Not found", { status: 404 });
   }
@@ -51,11 +59,7 @@ export async function loader({ params: { entryId }, request }: LoaderArgs) {
     throw new Response("Not found", { status: 404 });
   }
 
-  let session = await getSession(request.headers.get("cookie"));
-
-  if (!session.data.isAdmin) {
-    throw new Response("Not authenticated", { status: 401 });
-  }
+  
 
   return {
     ...entry,

@@ -7,6 +7,10 @@ import EntryForm from "~/components/entry-form";
 import { getSession } from "~/session";
 
 export async function action({ request }: ActionArgs) {
+  let session = await getSession(request.headers.get("cookie"));
+  if (!session.data.isAdmin) {
+    throw new Response("Not authenticated", { status: 401 });
+  }
   const db = new PrismaClient();
   const formData = await request.formData();
   let { entryId, _action, date, type, text } = Object.fromEntries(formData);
