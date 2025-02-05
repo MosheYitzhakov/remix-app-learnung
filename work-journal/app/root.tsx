@@ -7,6 +7,7 @@ import {
 } from "@remix-run/node";
 import {
   Form,
+  isRouteErrorResponse,
   Link,
   Links,
   LiveReload,
@@ -15,6 +16,7 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useRouteError,
 } from "@remix-run/react";
 
 import stylesheet from "~/tailwind.css";
@@ -22,6 +24,9 @@ import { destroySession, getSession } from "./session";
 import { handleSubmit } from "./routes";
 export async function action({ request }: ActionArgs) {
   const session = await getSession(request.headers.get("cookie"));
+  if (!session.data.isAdmin) {
+    throw new Response("Not authenticated", { status: 401 });
+  }
   return redirect("/", {
     headers: { "Set-Cookie": await destroySession(session) },
   });
@@ -76,5 +81,22 @@ export default function App() {
         <LiveReload />
       </body>
     </html>
+  );
+}
+export function ErrorBoundary() {
+  const error = useRouteError();
+  return (
+    <div>
+      <h1>Oh no, an error occurred!</h1>
+      {isRouteErrorResponse(error) ? (
+        <p>
+          {error.status} – {error.statusText}
+        </p>
+      ) : error instanceof Error ? (
+        <p>{error.message}</p>
+      ) : (
+        <p>Something happened.</p>
+      )}
+    </div>
   );
 }
