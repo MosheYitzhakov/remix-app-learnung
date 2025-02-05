@@ -86,17 +86,25 @@ export default function App() {
 export function ErrorBoundary() {
   const error = useRouteError();
   return (
-    <div>
-      <h1>Oh no, an error occurred!</h1>
-      {isRouteErrorResponse(error) ? (
-        <p>
-          {error.status} – {error.statusText}
-        </p>
-      ) : error instanceof Error ? (
-        <p>{error.message}</p>
-      ) : (
-        <p>Something happened.</p>
-      )}
-    </div>
+    <html lang="en" className="h-full">
+      <head>
+        <title>Oh no</title>
+        <Meta />
+        <Links />
+      </head>
+      <body className="flex h-full flex-col items-center justify-center">
+        <p className="text-3xl">Oh no, an error occurred!</p>
+        {isRouteErrorResponse(error) ? (
+          <p>
+            {error.status} – {error.statusText}
+          </p>
+        ) : error instanceof Error ? (
+          <p>{error.message}</p>
+        ) : (
+          <p>Something happened.</p>
+        )}
+        <Scripts />
+      </body>
+    </html>
   );
 }
